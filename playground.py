@@ -7,5 +7,5 @@ from surebot import SureBot
 myBot = SureBot('mofesolapaul', 'Adebanke1.')
 
 # print(myBot.get_feed('somebody_i_love1', max_followers=2))
-print(myBot.get_feed('somebody_i_love1', max_media_count=5))
+print(myBot.interact('ajadi'))
 

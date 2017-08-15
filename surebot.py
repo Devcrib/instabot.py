@@ -42,6 +42,9 @@ class SureBot:
         if self.bot.login_status != True:
             print('Login failed')
             self.die()
+        
+        # stats
+        self.likes = []
 
     def die(self):
         self.bot.cleanup()
@@ -159,23 +162,26 @@ class SureBot:
     def feed_liker(self, feed):
         for media in feed:
             self._sleep()
-            self.like(media['media_id'])
+            self.like(media)
 
     # perform a like operation
-    def like(self, media_id):
+    def like(self, media):
         """ Send http request to like media by ID """
         if self.bot.login_status:
-            print('Liking a media item')
-            url_likes = self.bot.url_likes % (media_id)
+            print('Liking a {0}'.format(media['media_type']))
+            url_likes = self.bot.url_likes % (media['media_id'])
             try:
                 like = self.bot.s.post(url_likes)
-                last_liked_media_id = media_id
             except:
                 print("Like operation failed!")
                 like = 0
             return like
 
     def interact(self, user_name, max_likes=5, max_followers=5, comment_rate=.1):
+        user_feed = self.get_feed(user_name, max_likes)
+        self.feed_liker(user_feed)
+        exit(0)
+
         followers = self.get_user_followers(user_name, max_followers)
         for follower in followers:
             feed = self.get_feed(follower['username'], max_likes)
