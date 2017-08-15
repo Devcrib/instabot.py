@@ -160,6 +160,10 @@ class SureBot:
         return current_user_media[:max_media_count]
 
     def feed_liker(self, feed):
+        if not feed:
+            print('Cannot like empty feed!')
+            return
+
         for media in feed:
             self._sleep()
             self.like(media)
@@ -172,6 +176,7 @@ class SureBot:
             url_likes = self.bot.url_likes % (media['media_id'])
             try:
                 like = self.bot.s.post(url_likes)
+                self.likes.append(media)
             except:
                 print("Like operation failed!")
                 like = 0
@@ -180,7 +185,6 @@ class SureBot:
     def interact(self, user_name, max_likes=5, max_followers=5, comment_rate=.1):
         user_feed = self.get_feed(user_name, max_likes)
         self.feed_liker(user_feed)
-        exit(0)
 
         followers = self.get_user_followers(user_name, max_followers)
         for follower in followers:
