@@ -8,6 +8,7 @@ import time
 import json
 import urllib
 import random
+import datetime
 
 sys.path.append(os.path.join(sys.path[0], 'src'))
 from instabot import InstaBot
@@ -32,6 +33,7 @@ class SureBot:
 
     def __init__(self, user_name='', password=''):
         # options
+        self.start_time = datetime.datetime.now()
         self.user_name = user_name
         self.user_key = password
         self.my_profile = None
@@ -47,6 +49,9 @@ class SureBot:
         self.likes = []
 
     def die(self):
+        running_time = datetime.datetime.now() - self.start_time
+        print('\nSureBot out 😎\n-----------------')
+        print('Running time: {0}\nTotal likes: {1}\n'.format(running_time, len(self.likes)))
         self.bot.cleanup()
 
     def get_user_profile(self, user_name):
