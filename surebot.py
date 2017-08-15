@@ -7,6 +7,7 @@ import sys
 import time
 import json
 import urllib
+import random
 
 sys.path.append(os.path.join(sys.path[0], 'src'))
 from instabot import InstaBot
@@ -44,7 +45,7 @@ class SureBot:
         self.bot.cleanup()
 
     def get_user_profile(self, user_name):
-        time.sleep(1)
+        self._sleep()
         print("GET USER PROFILE ", user_name)
         response = self.bot.s.get(
             SureBot.ENDPOINTS['user_profile'].format(user_name))
@@ -56,7 +57,7 @@ class SureBot:
         return json.loads(response.text)
 
     def get_user_followers(self, user_name, max_followers=20):
-        time.sleep(1)
+        self._sleep()
         print("GET USER FOLLOWERS ", user_name)
         user = self.get_user_profile(user_name)
         if not user or user['user']['is_private'] or user['user']['has_blocked_viewer']:
@@ -68,8 +69,8 @@ class SureBot:
         has_next = True
 
         def fetch(current_user_followers, end_cursor, has_next):
-            time.sleep(1)
-            params = {'id': user['user']['id'], 'first': 10}
+            self._sleep()
+            params = {'id': user['user']['id'], 'first': 3}
             if end_cursor:
                 params['after'] = end_cursor
                 # params['first'] = 10
@@ -117,6 +118,9 @@ class SureBot:
         current_user_followers = work(current_user_followers, end_cursor, has_next)
         return current_user_followers
 
+    def interact(self, max_likes=5, comment_rate=.1):
+        pass
+
     # Privates ----------
     def _filter_followers(self, followers):
         useful = []
@@ -134,6 +138,7 @@ class SureBot:
                 continue
             useful.append(
                 {'username': user['username'], 'user_id': user['id']})
+        random.shuffle(useful)
         return useful
 
     def _build_query(self, params, query=FOLLOWERS):
@@ -142,3 +147,7 @@ class SureBot:
         return '{3}{0}?query_id={1}&{2}'.format(SureBot.ENDPOINTS['graphql'],
                                                 SureBot.QUERY_IDS[query], url,
                                                 SureBot.ENDPOINTS['insta_home'])
+
+    def _sleep(self):
+        s = random.choice(range(1, 4))
+        time.sleep(s)
