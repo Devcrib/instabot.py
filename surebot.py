@@ -18,9 +18,11 @@ class SureBot:
     # consts
     FOLLOWERS = 'followers'
     FOLLOWING = 'following'
+    MEDIA = 'media'
     QUERY_IDS = {
         FOLLOWERS: '17851374694183129',
-        FOLLOWING: '17874545323001329'
+        FOLLOWING: '17874545323001329',
+        MEDIA: '17888483320059182'
     }
     ENDPOINTS = {
         'insta_home': 'https://www.instagram.com',
@@ -68,7 +70,7 @@ class SureBot:
         end_cursor = None
         has_next = True
 
-        def fetch(current_user_followers, end_cursor, has_next):
+        while len(current_user_followers) < max_followers and has_next:
             self._sleep()
             params = {'id': user['user']['id'], 'first': 3}
             if end_cursor:
@@ -79,20 +81,18 @@ class SureBot:
             if response.status_code != 200:
                 print("Followers for '{0}' could not be fetched: {1}".format(
                     user_name, response.status_code))
-                has_next = False
-                return current_user_followers, end_cursor, has_next
+                return
 
             data = json.loads(response.text)
             if data['status'] != 'ok':
-                print("Unable to fetch followers for '{0}'".format(user_name))
-                has_next = False
-                return current_user_followers, end_cursor, has_next
+                print(
+                    "Unable to fetch followers for '{0}'".format(user_name))
+                return
 
             data = data['data']
             if data['user']['edge_followed_by']['count'] == 0:
                 print("User '{0}' has no followers".format(user_name))
-                has_next = False
-                return current_user_followers, end_cursor, has_next
+                return
 
             # go on with this user
             print("Fetched '{0}' of {1} follower(s)".format(len(
@@ -104,22 +104,67 @@ class SureBot:
                 data['user']['edge_followed_by']['edges'])
             if filtered:
                 current_user_followers += filtered
-                
-            return current_user_followers[:max_followers], end_cursor, has_next
 
-        def work(current_user_followers, end_cursor, has_next):
-            while len(current_user_followers) < max_followers and has_next:
-                print('Calling fetch...', len(current_user_followers))
-                current_user_followers, end_cursor, has_next = fetch(
-                    current_user_followers, end_cursor, has_next)
-                
-            return current_user_followers
+        return current_user_followers[:max_followers]
 
-        current_user_followers = work(current_user_followers, end_cursor, has_next)
-        return current_user_followers
+    def get_feed(self, user_name, max_media_count=20):
+        user = self.get_user_profile(user_name)
+        if not user or user['user']['is_private'] or user['user']['has_blocked_viewer']:
+            print("User '{0}' not found, or is a private account, or they've blocked you!".format(
+                user_name))
+            return
 
-    def interact(self, max_likes=5, comment_rate=.1):
-        pass
+        current_user_media = []
+        end_cursor = None
+        has_next = True
+
+        while len(current_user_media) < max_media_count and has_next:
+            self._sleep()
+            params = {'id': user['user']['id'], 'first': 12}
+            if end_cursor:
+                params['after'] = end_cursor
+
+            response = self.bot.s.get(self._build_query(params, SureBot.MEDIA))
+            if response.status_code != 200:
+                print("Media feed for '{0}' could not be fetched: {1}".format(
+                    user_name, response.status_code))
+                return
+
+            data = json.loads(response.text)
+            if data['status'] != 'ok':
+                print(
+                    "Unable to fetch media feed for '{0}'".format(user_name))
+                return
+
+            data = data['data']
+            if data['user']['edge_owner_to_timeline_media']['count'] == 0:
+                print("User '{0}' has no media uploaded".format(user_name))
+                return
+
+            # go on with this media feed
+            print("Fetched '{0}' of {1} media".format(len(
+                data['user']['edge_owner_to_timeline_media']['edges']),
+                data['user']['edge_owner_to_timeline_media']['count']))
+            has_next = data['user']['edge_owner_to_timeline_media']['page_info']['has_next_page']
+            end_cursor = data['user']['edge_owner_to_timeline_media']['page_info']['end_cursor']
+
+            #pick em media
+            for media in data['user']['edge_owner_to_timeline_media']['edges']:
+                media = media['node']
+                current_user_media.append({'media_id': media['id']})
+            
+        return current_user_media[:max_media_count]
+
+    def feed_liker(self, feed):
+        for media in feed:
+            self._sleep()
+            self.bot.like(media['media_id'])
+
+    def interact(self, user_name, max_likes=5, max_followers=5, comment_rate=.1):
+        followers = self.get_user_followers(user_name, max_followers)
+        for follower in followers:
+            feed = self.get_feed(follower['username'], max_likes)
+            self.feed_liker(feed)
 
     # Privates ----------
     def _filter_followers(self, followers):
