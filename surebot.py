@@ -69,9 +69,10 @@ class SureBot:
 
         def fetch(current_user_followers, end_cursor, has_next):
             time.sleep(1)
-            params = {'id': user['user']['id'], 'first': 20}
+            params = {'id': user['user']['id'], 'first': 10}
             if end_cursor:
                 params['after'] = end_cursor
+                # params['first'] = 10
 
             response = self.bot.s.get(self._build_query(params))
             if response.status_code != 200:
@@ -85,7 +86,7 @@ class SureBot:
                 print("Unable to fetch followers for '{0}'".format(user_name))
                 has_next = False
                 return current_user_followers, end_cursor, has_next
-            
+
             data = data['data']
             if data['user']['edge_followed_by']['count'] == 0:
                 print("User '{0}' has no followers".format(user_name))
@@ -98,17 +99,43 @@ class SureBot:
             has_next = data['user']['edge_followed_by']['page_info']['has_next_page']
             end_cursor = data['user']['edge_followed_by']['page_info']['end_cursor']
 
-            return current_user_followers, end_cursor, has_next
+            filtered = self._filter_followers(
+                data['user']['edge_followed_by']['edges'])
+            if filtered:
+                current_user_followers += filtered
+                
+            return current_user_followers[:max_followers], end_cursor, has_next
 
         def work(current_user_followers, end_cursor, has_next):
             while len(current_user_followers) < max_followers and has_next:
+                print('Calling fetch...', len(current_user_followers))
                 current_user_followers, end_cursor, has_next = fetch(
                     current_user_followers, end_cursor, has_next)
+                
             return current_user_followers
 
-        work(current_user_followers, end_cursor, has_next)
+        current_user_followers = work(current_user_followers, end_cursor, has_next)
+        return current_user_followers
 
     # Privates ----------
+    def _filter_followers(self, followers):
+        useful = []
+        for follower in followers:
+            user = self.get_user_profile(follower['node']['username'])
+            if not user or user['user']['is_private'] or user['user']['has_blocked_viewer']:
+                print("User '{0}' not found, or is a private account, or they've blocked you!".format(
+                    follower['node']['username']))
+                continue
+
+            user = user['user']
+            if user['follows_viewer'] or user['has_requested_viewer']:
+                print("Skipping {0}, they follow you already".format(
+                    user['username']))
+                continue
+            useful.append(
+                {'username': user['username'], 'user_id': user['id']})
+        return useful
+
     def _build_query(self, params, query=FOLLOWERS):
         data = urllib.urlencode({"variables": json.dumps(params)})
         url = data.encode('utf-8')

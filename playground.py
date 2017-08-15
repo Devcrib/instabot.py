@@ -6,4 +6,4 @@ from surebot import SureBot
 
 myBot = SureBot('mofesolapaul', 'Adebanke1.')
 
-myBot.get_user_followers('anike')
+print(myBot.get_user_followers('somebody_i_love1', max_followers=5))
