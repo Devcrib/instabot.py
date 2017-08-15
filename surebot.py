@@ -148,17 +148,32 @@ class SureBot:
             has_next = data['user']['edge_owner_to_timeline_media']['page_info']['has_next_page']
             end_cursor = data['user']['edge_owner_to_timeline_media']['page_info']['end_cursor']
 
-            #pick em media
+            # pick em media
             for media in data['user']['edge_owner_to_timeline_media']['edges']:
                 media = media['node']
-                current_user_media.append({'media_id': media['id']})
-            
+                current_user_media.append(
+                    {'media_id': media['id'], 'media_type': 'video' if media['is_video'] else 'photo'})
+
         return current_user_media[:max_media_count]
 
     def feed_liker(self, feed):
         for media in feed:
             self._sleep()
-            self.bot.like(media['media_id'])
+            self.like(media['media_id'])
+
+    # perform a like operation
+    def like(self, media_id):
+        """ Send http request to like media by ID """
+        if self.bot.login_status:
+            print('Liking a media item')
+            url_likes = self.bot.url_likes % (media_id)
+            try:
+                like = self.bot.s.post(url_likes)
+                last_liked_media_id = media_id
+            except:
+                print("Like operation failed!")
+                like = 0
+            return like
 
     def interact(self, user_name, max_likes=5, max_followers=5, comment_rate=.1):
         followers = self.get_user_followers(user_name, max_followers)
