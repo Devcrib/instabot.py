@@ -6,6 +6,4 @@ from surebot import SureBot
 
 myBot = SureBot('mofesolapaul', 'Adebanke1.')
 
-data = myBot.get_user_followers('anike')
-if data: print(json.dumps(data))
-else: print('toor')
+myBot.get_user_followers('anike')
