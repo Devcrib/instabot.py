@@ -59,25 +59,32 @@ class SureBot:
         time.sleep(1)
         print("GET USER FOLLOWERS ", user_name)
         user = self.get_user_profile(user_name)
-        if not user:
-            print("User '{0}' not found!".format(user_name))
+        if not user or user['user']['is_private'] or user['user']['has_blocked_viewer']:
+            print("User '{0}' not found, or is a private account, or they've blocked you!".format(user_name))
             return
         current_user_followers = []
-        last = None
+        end_cursor = None
+        has_next = False
 
         def fetch():
-            response = self.bot.s.get(self._build_query(
-            {'id': user['user']['id'], 'first': 20}))
+            time.sleep(1)
+            params = {'id': user['user']['id'], 'first': 20}
+            if end_cursor: params['after'] = end_cursor
+
+            response = self.bot.s.get(self._build_query(params))
             if response.status_code is not 200:
-                print("Followers for '{0}' could not be fetched: {1}".format(
-                    user_name, response.status_code))
+                print("Followers for '{0}' could not be fetched: {1}".format(user_name, response.status_code))
                 return
-            pass
+
+            data = json.loads(response.text)
+
 
         def work():
-            pass
+            while len(current_user_followers) < max_followers and has_next:
+                fetch()
+            return current_user_followers
 
-        return json.loads(response.text)
+        work()
 
     # Privates ----------
     def _build_query(self, params, query=FOLLOWERS):
